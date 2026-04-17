@@ -1,0 +1,14 @@
+spring:
+  profiles:
+    active: dev
+  messages:
+    basename: messages
+    encoding: UTF-8
+  application:
+    name: theelderforge
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+  flyway:
+    enabled: true

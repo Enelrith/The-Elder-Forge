@@ -1,0 +1,15 @@
+spring:
+  devtools:
+    restart:
+      exclude: db/migration/**
+  datasource:
+    url: jdbc:postgresql://localhost:5432/theelderforge
+    username:
+    password:
+  security:
+    jwt:
+      secret:
+      expiration-access-ms:
+      expiration-refresh-ms:
+  cookies:
+    secure: false
