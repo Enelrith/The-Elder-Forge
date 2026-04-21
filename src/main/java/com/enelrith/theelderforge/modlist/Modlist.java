@@ -1,0 +1,28 @@
+package com.enelrith.theelderforge.modlist;
+
+import com.enelrith.theelderforge.shared.BaseEntity;
+import com.enelrith.theelderforge.user.User;
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+@Getter
+@Setter
+@Entity
+@NoArgsConstructor
+@Table(name = "modlists")
+public class Modlist extends BaseEntity {
+    @Column(nullable = false, length = 255)
+    private String name;
+
+    @Column(length = 5000)
+    private String description;
+
+    @Column(nullable = false)
+    private Boolean isPublic;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+}
