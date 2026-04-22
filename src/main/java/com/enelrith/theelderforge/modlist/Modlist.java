@@ -31,4 +31,7 @@ public class Modlist extends BaseEntity {
 
     @OneToMany(mappedBy = "modlist", fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
     private List<Mod> mods = new ArrayList<>();
+
+    @OneToMany(mappedBy = "modlist", fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
+    private List<Plugin> plugins = new ArrayList<>();
 }

@@ -34,6 +34,13 @@ public class ModlistController {
         return ResponseEntity.created(location).body(modlistDto);
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<ModlistDto> getModlistById(@PathVariable UUID id, Authentication authentication) {
+        var modlistDto = modlistService.getModlistById(id, authentication.getName());
+
+        return ResponseEntity.ok(modlistDto);
+    }
+
     @PostMapping(value = "/{modlistId}/mods/file", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<List<ModDto>> addModsByFile(@RequestPart MultipartFile modlistFile, @PathVariable UUID modlistId, Authentication authentication) {
         var modsDto = modlistService.addModsByFile(modlistFile, modlistId, authentication.getName());

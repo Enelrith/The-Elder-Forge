@@ -5,7 +5,7 @@ import com.enelrith.theelderforge.modlist.dto.ModlistDto;
 import com.enelrith.theelderforge.user.UserMapper;
 import org.mapstruct.*;
 
-@Mapper(unmappedTargetPolicy = ReportingPolicy.IGNORE, componentModel = MappingConstants.ComponentModel.SPRING, uses = {UserMapper.class, ModMapper.class})
+@Mapper(unmappedTargetPolicy = ReportingPolicy.IGNORE, componentModel = MappingConstants.ComponentModel.SPRING, uses = {UserMapper.class, ModMapper.class, PluginMapper.class})
 public interface ModlistMapper {
     Modlist toEntity(AddModlistRequest addModlistRequest);
 

@@ -7,4 +7,5 @@ import java.util.UUID;
 
 public interface ModlistRepository extends JpaRepository<Modlist, UUID> {
     Optional<Modlist> findByIdAndUser_Id(UUID id, UUID userId);
+    Optional<Modlist> findByIdAndUser_Email(UUID id, String currentUserEmail);
 }

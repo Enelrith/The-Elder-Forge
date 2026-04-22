@@ -47,6 +47,13 @@ public class ModlistService {
         return modlistMapper.toModlistDto(savedModlist);
     }
 
+    public ModlistDto getModlistById(UUID id, String currentUserEmail) {
+        var modlist = modlistRepository.findByIdAndUser_Email(id, currentUserEmail)
+                .orElseThrow(() -> new NotFoundException("User not found"));
+
+        return modlistMapper.toModlistDto(modlist);
+    }
+
     @Transactional
     public List<ModDto> addModsByFile(MultipartFile modlistFile, UUID modlistId, String currentUserEmail) {
         var user = userRepository.findByEmail(currentUserEmail).orElseThrow(()
