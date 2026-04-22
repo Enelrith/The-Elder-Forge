@@ -7,13 +7,16 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Getter
 @Setter
 @Entity
 @NoArgsConstructor
 @Table(name = "modlists")
 public class Modlist extends BaseEntity {
-    @Column(nullable = false, length = 255)
+    @Column(nullable = false)
     private String name;
 
     @Column(length = 5000)
@@ -25,4 +28,7 @@ public class Modlist extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
+
+    @OneToMany(mappedBy = "modlist", fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
+    private List<Mod> mods = new ArrayList<>();
 }

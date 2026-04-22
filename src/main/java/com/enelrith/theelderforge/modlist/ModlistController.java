@@ -1,16 +1,20 @@
 package com.enelrith.theelderforge.modlist;
 
 import com.enelrith.theelderforge.modlist.dto.AddModlistRequest;
+import com.enelrith.theelderforge.modlist.dto.ModDto;
 import com.enelrith.theelderforge.modlist.dto.ModlistDto;
+import com.enelrith.theelderforge.modlist.dto.PluginDto;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+
+import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequiredArgsConstructor
@@ -28,5 +32,19 @@ public class ModlistController {
                 .buildAndExpand(modlistDto.id())
                 .toUri();
         return ResponseEntity.created(location).body(modlistDto);
+    }
+
+    @PostMapping(value = "/{modlistId}/mods/file", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<List<ModDto>> addModsByFile(@RequestPart MultipartFile modlistFile, @PathVariable UUID modlistId, Authentication authentication) {
+        var modsDto = modlistService.addModsByFile(modlistFile, modlistId, authentication.getName());
+
+        return ResponseEntity.ok(modsDto);
+    }
+
+    @PostMapping(value = "/{modlistId}/plugins/file", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<List<PluginDto>> addPluginsByFile(@RequestPart MultipartFile loadOrderFile, @PathVariable UUID modlistId, Authentication authentication) {
+        var pluginsDto = modlistService.addPluginsByFile(loadOrderFile, modlistId, authentication.getName());
+
+        return ResponseEntity.ok(pluginsDto);
     }
 }
