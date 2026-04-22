@@ -4,6 +4,7 @@ import com.enelrith.theelderforge.modlist.dto.AddModlistRequest;
 import com.enelrith.theelderforge.modlist.dto.ModDto;
 import com.enelrith.theelderforge.modlist.dto.ModlistDto;
 import com.enelrith.theelderforge.modlist.dto.PluginDto;
+import com.enelrith.theelderforge.modlist.dto.projection.ModlistInfo;
 import com.enelrith.theelderforge.shared.exception.NotFoundException;
 import com.enelrith.theelderforge.shared.exception.NotValidException;
 import com.enelrith.theelderforge.user.UserRepository;
@@ -52,6 +53,10 @@ public class ModlistService {
                 .orElseThrow(() -> new NotFoundException("User not found"));
 
         return modlistMapper.toModlistDto(modlist);
+    }
+
+    public List<ModlistInfo> getAllModlistsByUserEmail(String currentUserEmail) {
+        return modlistRepository.findAllByUser_Email(currentUserEmail);
     }
 
     @Transactional

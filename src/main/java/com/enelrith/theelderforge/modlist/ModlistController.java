@@ -4,6 +4,7 @@ import com.enelrith.theelderforge.modlist.dto.AddModlistRequest;
 import com.enelrith.theelderforge.modlist.dto.ModDto;
 import com.enelrith.theelderforge.modlist.dto.ModlistDto;
 import com.enelrith.theelderforge.modlist.dto.PluginDto;
+import com.enelrith.theelderforge.modlist.dto.projection.ModlistInfo;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
@@ -39,6 +40,13 @@ public class ModlistController {
         var modlistDto = modlistService.getModlistById(id, authentication.getName());
 
         return ResponseEntity.ok(modlistDto);
+    }
+
+    @GetMapping
+    public ResponseEntity<List<ModlistInfo>> getAllModlistsByUserEmail(Authentication authentication) {
+        var modlists = modlistService.getAllModlistsByUserEmail(authentication.getName());
+
+        return ResponseEntity.ok(modlists);
     }
 
     @PostMapping(value = "/{modlistId}/mods/file", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
