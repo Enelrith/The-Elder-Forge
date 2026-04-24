@@ -6,10 +6,16 @@ spring:
     url: jdbc:postgresql://localhost:5432/theelderforge
     username:
     password:
+server:
+  servlet:
+    session:
+      timeout: 30m
+      cookie:
+        http-only: true
+        same-site: lax
+        secure: false
+
+app:
   security:
-    jwt:
-      secret:
-      expiration-access-ms:
-      expiration-refresh-ms:
-  cookies:
-    secure: false
+    allowed-origins:
+      - http://localhost:3000

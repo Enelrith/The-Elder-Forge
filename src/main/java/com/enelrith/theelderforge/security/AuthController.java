@@ -1,58 +1,71 @@
 package com.enelrith.theelderforge.security;
 
-import com.enelrith.theelderforge.security.dto.AccessJwtResponse;
 import com.enelrith.theelderforge.security.dto.AuthRequest;
+import com.enelrith.theelderforge.security.dto.CsrfTokenResponse;
+import com.enelrith.theelderforge.security.dto.SessionAuthResponse;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.authentication.logout.LogoutHandler;
+import org.springframework.security.web.authentication.session.SessionAuthenticationStrategy;
+import org.springframework.security.web.context.SecurityContextRepository;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.web.csrf.CsrfToken;
 
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/auth")
 public class AuthController {
     private final AuthService authService;
-
-    @Value("${spring.cookies.secure}")
-    private boolean isCookieSecure;
-
-    @Value("${spring.security.jwt.expiration-refresh-ms}")
-    private long refreshExpirationMs;
+    private final SecurityContextRepository securityContextRepository;
+    private final SessionAuthenticationStrategy sessionAuthenticationStrategy;
+    private final LogoutHandler logoutHandler;
 
     @PostMapping
-    public ResponseEntity<AccessJwtResponse> loginUser(@RequestBody AuthRequest request, HttpServletResponse response) {
-        var jwtResponse =  authService.loginUser(request);
-        var refreshCookie = createRefreshTokenCookie(jwtResponse.refreshToken(), refreshExpirationMs);
+    public ResponseEntity<SessionAuthResponse> loginUser(@RequestBody @Valid AuthRequest request,
+                                                         HttpServletRequest httpRequest,
+                                                         HttpServletResponse httpResponse) {
+        var authentication = authService.authenticate(request);
+        sessionAuthenticationStrategy.onAuthentication(authentication, httpRequest, httpResponse);
 
-        response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
+        SecurityContext context = SecurityContextHolder.createEmptyContext();
+        context.setAuthentication(authentication);
+        SecurityContextHolder.setContext(context);
+        securityContextRepository.saveContext(context, httpRequest, httpResponse);
 
-        return ResponseEntity.ok(new AccessJwtResponse(jwtResponse.accessToken()));
+        return ResponseEntity.ok(new SessionAuthResponse(authentication.getName()));
     }
 
-    @PostMapping("/refresh")
-    public ResponseEntity<AccessJwtResponse> refreshToken(@CookieValue(name = "refreshToken") String refreshToken, HttpServletResponse response) {
-        var accessJwtResponse = authService.refreshToken(refreshToken);
-        if (accessJwtResponse.accessToken().isBlank()) {
-            var refreshCookie = createRefreshTokenCookie("", 0);
-            response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
-
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
-
-        return ResponseEntity.ok(accessJwtResponse);
+    @GetMapping
+    public ResponseEntity<SessionAuthResponse> getCurrentSession(Authentication authentication) {
+        return ResponseEntity.ok(new SessionAuthResponse(authentication.getName()));
     }
 
-    private ResponseCookie createRefreshTokenCookie(String token, long expirationMs) {
-        return ResponseCookie.from("refreshToken", token)
-                .httpOnly(true)
-                .secure(isCookieSecure)
-                .path("/")
-                .maxAge(expirationMs / 1000)
-                .sameSite("Strict")
-                .build();
+    @GetMapping("/csrf")
+    public ResponseEntity<CsrfTokenResponse> getCsrfToken(CsrfToken csrfToken) {
+        return ResponseEntity.ok(new CsrfTokenResponse(
+                csrfToken.getHeaderName(),
+                csrfToken.getParameterName(),
+                csrfToken.getToken()
+        ));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(Authentication authentication,
+                                       HttpServletRequest request,
+                                       HttpServletResponse response) {
+        logoutHandler.logout(request, response, authentication);
+        SecurityContextHolder.clearContext();
+
+        return ResponseEntity.noContent().build();
     }
 }

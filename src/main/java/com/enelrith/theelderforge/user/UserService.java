@@ -1,5 +1,6 @@
 package com.enelrith.theelderforge.user;
 
+import com.enelrith.theelderforge.shared.exception.AlreadyExistsException;
 import com.enelrith.theelderforge.user.dto.RegisterUserRequest;
 import com.enelrith.theelderforge.user.dto.UserDto;
 import jakarta.persistence.EntityExistsException;
@@ -20,7 +21,7 @@ public class UserService {
 
     @Transactional
     public UserDto registerUser(RegisterUserRequest request) {
-        if (userRepository.existsByEmail(request.email())) throw new EntityExistsException("Email already exists");
+        if (userRepository.existsByEmail(request.email())) throw new AlreadyExistsException("Email already exists");
 
         var user = userMapper.toEntity(request);
         user.setPassword(passwordEncoder.encode(request.password()));
