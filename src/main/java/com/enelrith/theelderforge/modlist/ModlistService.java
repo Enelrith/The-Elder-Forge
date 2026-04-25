@@ -1,9 +1,6 @@
 package com.enelrith.theelderforge.modlist;
 
-import com.enelrith.theelderforge.modlist.dto.AddModlistRequest;
-import com.enelrith.theelderforge.modlist.dto.ModDto;
-import com.enelrith.theelderforge.modlist.dto.ModlistDto;
-import com.enelrith.theelderforge.modlist.dto.PluginDto;
+import com.enelrith.theelderforge.modlist.dto.*;
 import com.enelrith.theelderforge.modlist.dto.projection.ModlistInfo;
 import com.enelrith.theelderforge.shared.exception.NotFoundException;
 import com.enelrith.theelderforge.shared.exception.NotValidException;
@@ -19,9 +16,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -35,6 +30,7 @@ public class ModlistService {
     private final ModRepository modRepository;
     private final PluginRepository pluginRepository;
     private final PluginMapper pluginMapper;
+    private final CategoryRepository categoryRepository;
 
     @Transactional
     public ModlistDto addModlist(AddModlistRequest request, String currentUserEmail) {
@@ -65,14 +61,9 @@ public class ModlistService {
                 -> new NotFoundException("User not found"));
         var modlist = modlistRepository.findByIdAndUser_Id(modlistId, user.getId()).orElseThrow(()
                 -> new NotFoundException("Modlist not found"));
-        validateModlistFile(modlistFile);
+        validateUploadedFile(modlistFile, "modlist.txt");
 
-        List<String> lines;
-        try (var reader = new BufferedReader(new InputStreamReader(modlistFile.getInputStream(), StandardCharsets.UTF_8))) {
-            lines = reader.lines().toList();
-        } catch (IOException e) {
-            throw new NotValidException("Invalid file: " + e.getMessage());
-        }
+        var lines = getFileLines(modlistFile);
 
         var modNames = getModNames(lines);
         int modPriorityCount = modNames.size() - 1;
@@ -91,14 +82,9 @@ public class ModlistService {
                 -> new NotFoundException("User not found"));
         var modlist = modlistRepository.findByIdAndUser_Id(modlistId, user.getId()).orElseThrow(()
                 -> new NotFoundException("Modlist not found"));
-        validateLoadOrderFile(loadOrderFile);
+        validateUploadedFile(loadOrderFile, "loadorder.txt");
 
-        List<String> lines;
-        try (var reader = new BufferedReader(new InputStreamReader(loadOrderFile.getInputStream(), StandardCharsets.UTF_8))) {
-            lines = reader.lines().toList();
-        } catch (IOException e) {
-            throw new NotValidException("Invalid file: " + e.getMessage());
-        }
+        var lines = getFileLines(loadOrderFile);
 
         var pluginNames = getPluginNames(lines);
         int pluginPriorityCount = pluginNames.size() - 1;
@@ -109,6 +95,72 @@ public class ModlistService {
         log.info("{} plugins added to modlist with id: {}", pluginPriorityCount, modlist.getId());
 
         return savedPlugins.stream().map(pluginMapper::toPluginDto).toList();
+    }
+
+    @Transactional
+    public ModlistDto addMetaBuilderInfoToModlist(MultipartFile modDataFile, UUID modlistId, String currentUserEmail) {
+        var user = userRepository.findByEmail(currentUserEmail).orElseThrow(()
+                -> new NotFoundException("User not found"));
+        var modlist = modlistRepository.findByIdAndUser_Id(modlistId, user.getId()).orElseThrow(()
+                -> new NotFoundException("Modlist not found"));
+        validateUploadedFile(modDataFile, "mod_data.txt");
+
+        var lines = getFileLines(modDataFile);
+        var parsedModInfoList = buildParsedModInfoList(lines);
+
+        for (var parsedModInfo : parsedModInfoList) {
+            var mod = modRepository.findByNameAndModlist_Id(parsedModInfo.modName(), modlist.getId())
+                    .orElseThrow(() -> new NotFoundException("Mod not found"));
+            var category = categoryRepository.findByNexusId(parsedModInfo.nexusCategory())
+                    .orElseThrow(() -> new NotFoundException("Category not found"));
+            mod.setCategory(category);
+
+                for (var pluginName : parsedModInfo.plugins()) {
+                var plugin = pluginRepository.findByNameAndModlist_Id(pluginName, modlist.getId())
+                        .orElseThrow(() -> new NotFoundException("Plugin not found"));
+                plugin.setMod(mod);
+                }
+        }
+
+        modlistRepository.flush();
+        var flushedModlist = modlistRepository.findByIdAndUser_Id(modlistId, user.getId()).orElseThrow(()
+                -> new NotFoundException("Modlist not found"));
+
+        return modlistMapper.toModlistDto(flushedModlist);
+    }
+
+    private List<ParsedModInfo> buildParsedModInfoList(List<String> lines) {
+        List<ParsedModInfo> parsedModInfoList = new ArrayList<>();
+
+        for (var line : lines) {
+            var splitInfo = line.split("\\|");
+            if (splitInfo.length != 0 && splitInfo[0].startsWith("mod_name=")) {
+                var cleanedName = splitInfo[0].substring("mod_name=".length());
+                var cleanedModId = Integer.valueOf(splitInfo[1].split("modid=")[1]);
+                var cleanedNexusCategory = Integer.valueOf(splitInfo[2].split("nexusCategory=")[1]);
+                var cleanedPluginList = new ArrayList<String>();
+
+                if (splitInfo.length > 3) {
+                    for (int i = 3; i < splitInfo.length; i++) {
+                        var cleanedPlugin = splitInfo[i].split("plugin=")[1];
+                        cleanedPluginList.add(cleanedPlugin);
+                    }
+                }
+                var parsedModInfo = new ParsedModInfo(cleanedName, cleanedModId, cleanedNexusCategory, cleanedPluginList);
+                parsedModInfoList.add(parsedModInfo);
+            }
+        }
+        return parsedModInfoList;
+    }
+
+    private List<String> getFileLines(MultipartFile modlistFile) {
+        List<String> lines;
+        try (var reader = new BufferedReader(new InputStreamReader(modlistFile.getInputStream(), StandardCharsets.UTF_8))) {
+            lines = reader.lines().toList();
+        } catch (IOException e) {
+            throw new NotValidException("Invalid file: " + e.getMessage());
+        }
+        return lines;
     }
 
     private List<String> getModNames(List<String> lines) {
@@ -159,29 +211,13 @@ public class ModlistService {
         return plugins;
     }
 
-    private void validateModlistFile(MultipartFile file) {
+    private void validateUploadedFile(MultipartFile file, String expectedFileName) {
         if (file.isEmpty()) {
             throw new NotValidException("File must not be empty");
         }
 
         String filename = file.getOriginalFilename();
-        if (filename == null || !filename.equals("modlist.txt")) {
-            throw new NotValidException("Invalid file");
-        }
-
-        String contentType = file.getContentType();
-        if (contentType == null || !contentType.equals(MediaType.TEXT_PLAIN_VALUE)) {
-            throw new NotValidException("Invalid file");
-        }
-    }
-
-    private void validateLoadOrderFile(MultipartFile file) {
-        if (file.isEmpty()) {
-            throw new NotValidException("File must not be empty");
-        }
-
-        String filename = file.getOriginalFilename();
-        if (filename == null || !filename.equals("loadorder.txt")) {
+        if (filename == null || !filename.equals(expectedFileName)) {
             throw new NotValidException("Invalid file");
         }
 

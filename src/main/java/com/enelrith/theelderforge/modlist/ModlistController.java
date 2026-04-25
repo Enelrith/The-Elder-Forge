@@ -62,4 +62,11 @@ public class ModlistController {
 
         return ResponseEntity.ok(pluginsDto);
     }
+
+    @PostMapping(value = "/{modlistId}/meta")
+    public ResponseEntity<ModlistDto> addMetaBuilderInfoToModlist(@RequestPart MultipartFile modDataFile, @PathVariable UUID modlistId, Authentication authentication) {
+        var modlistDto = modlistService.addMetaBuilderInfoToModlist(modDataFile, modlistId, authentication.getName());
+
+        return ResponseEntity.ok(modlistDto);
+    }
 }
