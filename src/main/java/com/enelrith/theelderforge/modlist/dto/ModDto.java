@@ -8,5 +8,6 @@ public record ModDto(UUID id,
                      String name,
                      String notes,
                      Integer priority,
-                     CategoryDto category) {
+                     CategoryDto category,
+                     Integer nexusId) {
 }

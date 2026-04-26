@@ -28,4 +28,7 @@ public class Mod extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id")
     private Category category;
+
+    @Column(unique = true, length = 10)
+    private Integer nexusId;
 }
