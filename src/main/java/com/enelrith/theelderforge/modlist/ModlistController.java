@@ -5,8 +5,11 @@ import com.enelrith.theelderforge.modlist.dto.ModDto;
 import com.enelrith.theelderforge.modlist.dto.ModlistDto;
 import com.enelrith.theelderforge.modlist.dto.PluginDto;
 import com.enelrith.theelderforge.modlist.dto.projection.ModlistInfo;
+import com.enelrith.theelderforge.modlist.dto.projection.ModlistPagedInfo;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -42,7 +45,7 @@ public class ModlistController {
         return ResponseEntity.ok(modlistDto);
     }
 
-    @GetMapping
+    @GetMapping("/user")
     public ResponseEntity<List<ModlistInfo>> getAllModlistsByUserEmail(Authentication authentication) {
         var modlists = modlistService.getAllModlistsByUserEmail(authentication.getName());
 
@@ -68,5 +71,12 @@ public class ModlistController {
         var modlistDto = modlistService.addMetaBuilderInfoToModlist(modDataFile, modlistId, authentication.getName());
 
         return ResponseEntity.ok(modlistDto);
+    }
+
+    @GetMapping
+    public ResponseEntity<Page<ModlistPagedInfo>> getAllModlists(@RequestParam(defaultValue = "0") int page) {
+        var pagedModlists = modlistService.getAllModlists(page);
+
+        return ResponseEntity.ok(pagedModlists);
     }
 }

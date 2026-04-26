@@ -2,11 +2,15 @@ package com.enelrith.theelderforge.modlist;
 
 import com.enelrith.theelderforge.modlist.dto.*;
 import com.enelrith.theelderforge.modlist.dto.projection.ModlistInfo;
+import com.enelrith.theelderforge.modlist.dto.projection.ModlistPagedInfo;
 import com.enelrith.theelderforge.shared.exception.NotFoundException;
 import com.enelrith.theelderforge.shared.exception.NotValidException;
 import com.enelrith.theelderforge.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -45,9 +49,11 @@ public class ModlistService {
     }
 
     public ModlistDto getModlistById(UUID id, String currentUserEmail) {
-        var modlist = modlistRepository.findByIdAndUser_Email(id, currentUserEmail)
-                .orElseThrow(() -> new NotFoundException("User not found"));
-
+        var modlist = modlistRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Modlist not found"));
+        if (!modlist.getIsPublic() && !currentUserEmail.equals(modlist.getUser().getEmail())) {
+            throw new NotValidException("This modlist is not public");
+        }
         return modlistMapper.toModlistDto(modlist);
     }
 
@@ -114,6 +120,7 @@ public class ModlistService {
             var category = categoryRepository.findByNexusId(parsedModInfo.nexusCategory())
                     .orElseThrow(() -> new NotFoundException("Category not found"));
             mod.setCategory(category);
+            mod.setNexusId(parsedModInfo.modId());
 
                 for (var pluginName : parsedModInfo.plugins()) {
                 var plugin = pluginRepository.findByNameAndModlist_Id(pluginName, modlist.getId())
@@ -121,12 +128,15 @@ public class ModlistService {
                 plugin.setMod(mod);
                 }
         }
-
         modlistRepository.flush();
-        var flushedModlist = modlistRepository.findByIdAndUser_Id(modlistId, user.getId()).orElseThrow(()
-                -> new NotFoundException("Modlist not found"));
 
-        return modlistMapper.toModlistDto(flushedModlist);
+        return modlistMapper.toModlistDto(modlist);
+    }
+
+    public Page<ModlistPagedInfo> getAllModlists(int page) {
+        var pageable = PageRequest.of(page, 20, Sort.by(Sort.Direction.DESC, "updatedAt"));
+
+        return modlistRepository.findAllProjection(pageable);
     }
 
     private List<ParsedModInfo> buildParsedModInfoList(List<String> lines) {

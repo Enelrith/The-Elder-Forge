@@ -46,7 +46,10 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                         .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
-                        .ignoringRequestMatchers(PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.POST, "/api/v1/auth")))
+                        .ignoringRequestMatchers(PathPatternRequestMatcher.withDefaults()
+                                .matcher(HttpMethod.POST, "/api/v1/auth")
+                        )
+                )
                 .sessionManagement(c -> c.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 .authorizeHttpRequests((c) ->
                         c
@@ -55,6 +58,7 @@ public class SecurityConfig {
                                 .requestMatchers(HttpMethod.POST, "/api/v1/users").permitAll()
                                 .requestMatchers(HttpMethod.POST, "/api/v1/auth").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/api/v1/auth/csrf").permitAll()
+                                .requestMatchers(HttpMethod.GET, "/api/v1/modlists").permitAll()
                                 .anyRequest().authenticated()
                 )
                 .exceptionHandling(c -> c
