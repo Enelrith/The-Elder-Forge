@@ -133,10 +133,18 @@ public class ModlistService {
         return modlistMapper.toModlistDto(modlist);
     }
 
-    public Page<ModlistPagedInfo> getAllModlists(int page) {
+    public Page<ModlistPagedInfo> getAllModlists(int page, String name) {
         var pageable = PageRequest.of(page, 20, Sort.by(Sort.Direction.DESC, "updatedAt"));
 
-        return modlistRepository.findAllProjection(pageable);
+        return modlistRepository.findAllProjection(pageable, name);
+    }
+
+    @Transactional
+    public void deleteModlist(UUID modlistId, String userEmail) {
+        var modlist = modlistRepository.findByIdAndUser_Email(modlistId, userEmail)
+                .orElseThrow(() -> new NotFoundException("Modlist not found"));
+
+        modlistRepository.delete(modlist);
     }
 
     private List<ParsedModInfo> buildParsedModInfoList(List<String> lines) {

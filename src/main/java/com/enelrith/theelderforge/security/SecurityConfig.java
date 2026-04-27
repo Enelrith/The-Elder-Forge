@@ -59,6 +59,8 @@ public class SecurityConfig {
                                 .requestMatchers(HttpMethod.POST, "/api/v1/auth").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/api/v1/auth/csrf").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/api/v1/modlists").permitAll()
+                                .requestMatchers(HttpMethod.GET, "/api/v1/modlists/user").authenticated()
+                                .requestMatchers(HttpMethod.GET, "/api/v1/modlists/{modlistId}").permitAll()
                                 .anyRequest().authenticated()
                 )
                 .exceptionHandling(c -> c

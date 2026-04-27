@@ -9,7 +9,6 @@ import com.enelrith.theelderforge.modlist.dto.projection.ModlistPagedInfo;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -40,7 +39,8 @@ public class ModlistController {
 
     @GetMapping("/{id}")
     public ResponseEntity<ModlistDto> getModlistById(@PathVariable UUID id, Authentication authentication) {
-        var modlistDto = modlistService.getModlistById(id, authentication.getName());
+        var authName = authentication != null ? authentication.getName() : "";
+        var modlistDto = modlistService.getModlistById(id, authName);
 
         return ResponseEntity.ok(modlistDto);
     }
@@ -74,9 +74,16 @@ public class ModlistController {
     }
 
     @GetMapping
-    public ResponseEntity<Page<ModlistPagedInfo>> getAllModlists(@RequestParam(defaultValue = "0") int page) {
-        var pagedModlists = modlistService.getAllModlists(page);
+    public ResponseEntity<Page<ModlistPagedInfo>> getAllModlists(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "") String name) {
+        var pagedModlists = modlistService.getAllModlists(page, name);
 
         return ResponseEntity.ok(pagedModlists);
+    }
+
+    @DeleteMapping("/{modlistId}")
+    public ResponseEntity<Void> deleteModlist(@PathVariable UUID modlistId, Authentication authentication) {
+        modlistService.deleteModlist(modlistId, authentication.getName());
+
+        return ResponseEntity.noContent().build();
     }
 }
