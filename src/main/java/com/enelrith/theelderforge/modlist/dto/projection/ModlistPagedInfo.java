@@ -1,5 +1,7 @@
 package com.enelrith.theelderforge.modlist.dto.projection;
 
+import com.enelrith.theelderforge.user.dto.projection.UserInfo;
+
 import java.time.Instant;
 import java.util.UUID;
 

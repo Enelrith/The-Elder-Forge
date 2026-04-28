@@ -46,8 +46,9 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                         .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
-                        .ignoringRequestMatchers(PathPatternRequestMatcher.withDefaults()
-                                .matcher(HttpMethod.POST, "/api/v1/auth")
+                        .ignoringRequestMatchers(
+                                PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.POST, "/api/v1/auth"),
+                                PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.POST, "/api/v1/users")
                         )
                 )
                 .sessionManagement(c -> c.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))

@@ -10,5 +10,8 @@ public record RegisterUserRequest(@Size(message = "{user.email.size}", max = 255
                                   String email,
                                   @Size(message = "{user.password.size}", min = 8, max = 72)
                                   @NotBlank(message = "{user.password.notBlank}")
-                                  String password) {
+                                  String password,
+                                  @NotBlank
+                                  @Size(max = 20)
+                                  String username) {
 }

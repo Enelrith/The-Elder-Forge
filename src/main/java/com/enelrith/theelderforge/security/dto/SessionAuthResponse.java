@@ -1,4 +1,4 @@
 package com.enelrith.theelderforge.security.dto;
 
-public record SessionAuthResponse(String email) {
+public record SessionAuthResponse(String email, String username) {
 }

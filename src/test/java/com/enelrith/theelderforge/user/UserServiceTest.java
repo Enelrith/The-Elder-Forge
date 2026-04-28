@@ -34,10 +34,10 @@ class UserServiceTest {
     private final String testEmail = "test@email.com";
     private final String testPassword = "12345678";
     private final String testHashedPassword = "hashedPassword";
-
+    private final String testUsername = "testUsername";
     @Test
     void shouldRegisterUser() {
-        var request = new RegisterUserRequest(testEmail, testPassword);
+        var request = new RegisterUserRequest(testEmail, testPassword, testUsername);
         var user = userMapper.toEntity(request);
 
         when(userRepository.existsByEmail(testEmail)).thenReturn(false);
@@ -53,7 +53,7 @@ class UserServiceTest {
 
     @Test
     void shouldThrowEntityExistsException() {
-        var request = new RegisterUserRequest(testEmail, testPassword);
+        var request = new RegisterUserRequest(testEmail, testPassword, testUsername);
 
         when(userRepository.existsByEmail(testEmail)).thenReturn(true);
 

@@ -3,6 +3,8 @@ package com.enelrith.theelderforge.security;
 import com.enelrith.theelderforge.security.dto.AuthRequest;
 import com.enelrith.theelderforge.security.dto.CsrfTokenResponse;
 import com.enelrith.theelderforge.security.dto.SessionAuthResponse;
+import com.enelrith.theelderforge.shared.exception.NotFoundException;
+import com.enelrith.theelderforge.user.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -29,6 +31,7 @@ public class AuthController {
     private final SecurityContextRepository securityContextRepository;
     private final SessionAuthenticationStrategy sessionAuthenticationStrategy;
     private final LogoutHandler logoutHandler;
+    private final UserRepository userRepository;
 
     @PostMapping
     public ResponseEntity<SessionAuthResponse> loginUser(@RequestBody @Valid AuthRequest request,
@@ -42,12 +45,12 @@ public class AuthController {
         SecurityContextHolder.setContext(context);
         securityContextRepository.saveContext(context, httpRequest, httpResponse);
 
-        return ResponseEntity.ok(new SessionAuthResponse(authentication.getName()));
+        return ResponseEntity.ok(buildSessionAuthResponse(authentication));
     }
 
     @GetMapping
     public ResponseEntity<SessionAuthResponse> getCurrentSession(Authentication authentication) {
-        return ResponseEntity.ok(new SessionAuthResponse(authentication.getName()));
+        return ResponseEntity.ok(buildSessionAuthResponse(authentication));
     }
 
     @GetMapping("/csrf")
@@ -67,5 +70,11 @@ public class AuthController {
         SecurityContextHolder.clearContext();
 
         return ResponseEntity.noContent().build();
+    }
+
+    private SessionAuthResponse buildSessionAuthResponse(Authentication authentication) {
+        var user = userRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new NotFoundException("User not found"));
+        return new SessionAuthResponse(user.getEmail(), user.getUsername());
     }
 }

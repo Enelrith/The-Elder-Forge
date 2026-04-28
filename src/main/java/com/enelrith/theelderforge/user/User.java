@@ -21,4 +21,7 @@ public class User extends BaseEntity {
     private String password;
 
     private Instant deletedAt;
+
+    @Column(nullable = false, unique = true, length = 20)
+    private String username;
 }
