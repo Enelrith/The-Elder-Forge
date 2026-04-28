@@ -1,9 +1,6 @@
 package com.enelrith.theelderforge.modlist;
 
-import com.enelrith.theelderforge.modlist.dto.AddModlistRequest;
-import com.enelrith.theelderforge.modlist.dto.ModDto;
-import com.enelrith.theelderforge.modlist.dto.ModlistDto;
-import com.enelrith.theelderforge.modlist.dto.PluginDto;
+import com.enelrith.theelderforge.modlist.dto.*;
 import com.enelrith.theelderforge.modlist.dto.projection.ModlistInfo;
 import com.enelrith.theelderforge.modlist.dto.projection.ModlistPagedInfo;
 import jakarta.validation.Valid;
@@ -85,5 +82,12 @@ public class ModlistController {
         modlistService.deleteModlist(modlistId, authentication.getName());
 
         return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{modlistId}")
+    public ResponseEntity<ModlistDto> updateModlist(@RequestBody @Valid UpdateModlistRequest request, @PathVariable UUID modlistId, Authentication authentication) {
+        var modlistDto = modlistService.updateModlist(request, modlistId, authentication.getName());
+
+        return ResponseEntity.ok(modlistDto);
     }
 }

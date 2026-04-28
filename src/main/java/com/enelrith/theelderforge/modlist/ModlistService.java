@@ -12,6 +12,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -27,6 +28,8 @@ import java.util.*;
 @Transactional(readOnly = true)
 @Slf4j
 public class ModlistService {
+    private static final int BULK_INSERT_CHUNK_SIZE = 500;
+
     private final ModlistRepository modlistRepository;
     private final ModlistMapper modlistMapper;
     private final UserRepository userRepository;
@@ -35,6 +38,7 @@ public class ModlistService {
     private final PluginRepository pluginRepository;
     private final PluginMapper pluginMapper;
     private final CategoryRepository categoryRepository;
+    private final JdbcTemplate jdbcTemplate;
 
     @Transactional
     public ModlistDto addModlist(AddModlistRequest request, String currentUserEmail) {
@@ -69,13 +73,19 @@ public class ModlistService {
                 -> new NotFoundException("Modlist not found"));
         validateUploadedFile(modlistFile, "modlist.txt");
 
+        if (!modlist.getMods().isEmpty()) {
+            modRepository.deleteAllByModlistId(modlistId);
+            modRepository.flush();
+        }
+
         var lines = getFileLines(modlistFile);
 
         var modNames = getModNames(lines);
         int modPriorityCount = modNames.size() - 1;
 
         var mods = buildMods(modNames, modPriorityCount, modlist);
-        var savedMods = modRepository.saveAllAndFlush(mods);
+        bulkInsertMods(mods, modlistId);
+        var savedMods = modRepository.findAllByModlist_IdOrderByPriorityDesc(modlistId);
 
         log.info("{} mods added to modlist with id: {}", modPriorityCount, modlist.getId());
 
@@ -90,13 +100,19 @@ public class ModlistService {
                 -> new NotFoundException("Modlist not found"));
         validateUploadedFile(loadOrderFile, "loadorder.txt");
 
+        if (!modlist.getPlugins().isEmpty()) {
+            pluginRepository.deleteAllByModlistId(modlistId);
+            pluginRepository.flush();
+        }
+
         var lines = getFileLines(loadOrderFile);
 
         var pluginNames = getPluginNames(lines);
         int pluginPriorityCount = pluginNames.size() - 1;
 
         var plugins = buildPlugins(pluginNames, pluginPriorityCount, modlist);
-        var savedPlugins = pluginRepository.saveAllAndFlush(plugins);
+        bulkInsertPlugins(plugins, modlistId);
+        var savedPlugins = pluginRepository.findAllByModlist_IdOrderByPriorityAsc(modlistId);
 
         log.info("{} plugins added to modlist with id: {}", pluginPriorityCount, modlist.getId());
 
@@ -141,10 +157,20 @@ public class ModlistService {
 
     @Transactional
     public void deleteModlist(UUID modlistId, String userEmail) {
+        int deletedRows = modlistRepository.deleteByIdAndUserEmail(modlistId, userEmail);
+        if (deletedRows == 0) {
+            throw new NotFoundException("Modlist not found");
+        }
+    }
+
+    @Transactional
+    public ModlistDto updateModlist(UpdateModlistRequest request, UUID modlistId, String userEmail) {
         var modlist = modlistRepository.findByIdAndUser_Email(modlistId, userEmail)
                 .orElseThrow(() -> new NotFoundException("Modlist not found"));
 
-        modlistRepository.delete(modlist);
+        var updatedModlist = modlistMapper.partialUpdate(request, modlist);
+
+        return modlistMapper.toModlistDto(updatedModlist);
     }
 
     private List<ParsedModInfo> buildParsedModInfoList(List<String> lines) {
@@ -227,6 +253,46 @@ public class ModlistService {
             index++;
         }
         return plugins;
+    }
+
+    private void bulkInsertMods(List<Mod> mods, UUID modlistId) {
+        for (int start = 0; start < mods.size(); start += BULK_INSERT_CHUNK_SIZE) {
+            var chunk = mods.subList(start, Math.min(start + BULK_INSERT_CHUNK_SIZE, mods.size()));
+            var sql = "insert into mods (id, name, notes, priority, modlist_id) values " + placeholders(chunk.size(), 5);
+            var args = new ArrayList<Object>();
+
+            for (var mod : chunk) {
+                args.add(mod.getId());
+                args.add(mod.getName());
+                args.add(mod.getNotes());
+                args.add(mod.getPriority());
+                args.add(modlistId);
+            }
+
+            jdbcTemplate.update(sql, args.toArray());
+        }
+    }
+
+    private void bulkInsertPlugins(List<Plugin> plugins, UUID modlistId) {
+        for (int start = 0; start < plugins.size(); start += BULK_INSERT_CHUNK_SIZE) {
+            var chunk = plugins.subList(start, Math.min(start + BULK_INSERT_CHUNK_SIZE, plugins.size()));
+            var sql = "insert into plugins (id, name, priority, modlist_id) values " + placeholders(chunk.size(), 4);
+            var args = new ArrayList<Object>();
+
+            for (var plugin : chunk) {
+                args.add(plugin.getId());
+                args.add(plugin.getName());
+                args.add(plugin.getPriority());
+                args.add(modlistId);
+            }
+
+            jdbcTemplate.update(sql, args.toArray());
+        }
+    }
+
+    private String placeholders(int rows, int columns) {
+        var rowPlaceholder = "(" + String.join(", ", Collections.nCopies(columns, "?")) + ")";
+        return String.join(", ", Collections.nCopies(rows, rowPlaceholder));
     }
 
     private void validateUploadedFile(MultipartFile file, String expectedFileName) {

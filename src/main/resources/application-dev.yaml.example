@@ -3,7 +3,7 @@ spring:
     restart:
       exclude: db/migration/**
   datasource:
-    url: jdbc:postgresql://localhost:5432/theelderforge
+    url: jdbc:postgresql://localhost:5432/theelderforge?reWriteBatchedInserts=true
     username:
     password:
 server:

@@ -5,6 +5,7 @@ import com.enelrith.theelderforge.modlist.dto.projection.ModlistPagedInfo;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -19,5 +20,10 @@ public interface ModlistRepository extends JpaRepository<Modlist, UUID> {
     @Query("select m from Modlist m where m.isPublic = true and lower(m.name) like lower(concat('%', :name, '%'))")
     Page<ModlistPagedInfo> findAllProjection(Pageable pageable, @Param("name") String name);
 
-    void deleteByIdAndUser_Email(UUID id, String userEmail);
+    @Modifying
+    @Query(
+            value = "delete from modlists where id = :id and user_id = (select id from users where email = :userEmail)",
+            nativeQuery = true
+    )
+    int deleteByIdAndUserEmail(@Param("id") UUID id, @Param("userEmail") String userEmail);
 }
