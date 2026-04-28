@@ -76,7 +76,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ErrorResponse> handleException(AccessDeniedException e, HttpServletRequest request) {
         var status = HttpStatus.FORBIDDEN;
-        var response = buildErrorResponse(Instant.now(), status.value(), "You are bit permitted to access to this resource", status.getReasonPhrase(), request.getServletPath());
+        var response = buildErrorResponse(Instant.now(), status.value(), "You are not permitted to access to this resource", status.getReasonPhrase(), request.getServletPath());
 
         return ResponseEntity.status(status).body(response);
     }
